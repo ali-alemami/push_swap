@@ -23,10 +23,10 @@ static bool	check_input_characters(const char *word)
 	int	i;
 
 	length = ft_strlen(word);
-	if ((length == 0) || (length == 1 && word[0] == '-'))
+	if ((length == 0) || (length == 1 && (word[0] == '-' || word[0] == '+')))
 		return (false);
 	i = 0;
-	if (word[0] == '-')
+	if (word[0] == '-' || word[0] == '+')
 		i++;
 	while (i < length)
 	{
@@ -46,7 +46,7 @@ static bool	check_int_limit(const char *word)
 	length = ft_strlen(word);
 	i = 0;
 	is_negative = word[0] == '-';
-	if (is_negative)
+	if (is_negative || word[0] == '+')
 		i++;
 	while (word[i] == '0' && i < length - 1)
 		i++;
