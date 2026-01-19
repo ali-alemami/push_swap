@@ -22,7 +22,7 @@ void	push_swap(int argc, char **argv)
 {
 	t_stack	a;
 	t_stack	b;
-	int	size;
+	int		size;
 
 	if (argc < 2 || argc > 501)
 		return ;
