@@ -32,6 +32,8 @@ void	push_swap(int argc, char **argv)
 		return ;
 	indexing(&a);
 	size = a.top + 1;
+	if (is_sorted(&a))
+		return ;
 	if (size == 2)
 	{
 		if (!is_sorted(&a))
