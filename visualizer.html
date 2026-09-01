@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Push_Swap Visualizer & Algorithm Simulator</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --foreground: #f8fafc;
+      --muted-foreground: #94a3b8;
+      --primary: #3b82f6;
+      --primary-foreground: #ffffff;
+      --secondary: #334155;
+      --accent: #10b981;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] min-h-screen p-4 sm:p-8 font-sans antialiased">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <header class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight text-[var(--foreground)] flex items-center gap-3">
+            <span class="p-2 bg-blue-500/10 text-blue-400 rounded-xl">⚡</span>
+            Push_Swap: Lookahead Radix Sort Simulator
+          </h1>
+          <p class="text-sm text-[var(--muted-foreground)] mt-1">
+            Interactive visualizer demonstrating <b>Coordinate Indexing</b> and the <b>Lookahead Next-Bit Retain Optimization</b> by <span class="text-blue-400 font-mono font-semibold">aalemami</span>.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="status-badge" class="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            Ready
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls & Input Panel -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-lg space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+        <div class="lg:col-span-7 flex items-center gap-2">
+          <label class="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Input:</label>
+          <input id="input-array" type="text" value="42 -17 88 0 105 3 24 9" class="w-full bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] text-sm rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-blue-500 transition-colors" />
+          <button onclick="loadCustomInput()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow transition">
+            Load
+          </button>
+        </div>
+        <div class="lg:col-span-5 flex items-center justify-start lg:justify-end gap-2">
+          <button onclick="generateRandom(8)" class="px-3 py-2 bg-[var(--secondary)] hover:bg-slate-600 text-xs font-medium rounded-lg transition">
+            🎲 Random
+          </button>
+          <button onclick="stepBack()" class="px-3 py-2 bg-[var(--secondary)] hover:bg-slate-600 text-xs font-mono rounded-lg transition">
+            ⏮ Prev
+          </button>
+          <button id="play-btn" onclick="togglePlay()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow">
+            ▶ Play
+          </button>
+          <button onclick="stepForward()" class="px-3 py-2 bg-[var(--secondary)] hover:bg-slate-600 text-xs font-mono rounded-lg transition">
+            Next ⏭
+          </button>
+          <button onclick="resetSimulation()" class="px-3 py-2 bg-[var(--secondary)] hover:bg-slate-600 text-xs rounded-lg transition">
+            ↺ Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Playback Speed Slider -->
+      <div class="flex items-center gap-3 pt-2 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+        <span>Speed:</span>
+        <input id="speed-slider" type="range" min="150" max="1200" value="600" class="w-36 accent-blue-500 cursor-pointer" onchange="updateSpeed()">
+        <span id="speed-val" class="font-mono text-[var(--foreground)]">600ms</span>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Monitor -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 text-center">
+        <div class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] tracking-wider">Phase</div>
+        <div id="phase-display" class="font-bold text-sm text-blue-400 mt-1 truncate">Raw Input</div>
+      </div>
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 text-center">
+        <div class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] tracking-wider">Current Bit</div>
+        <div id="bit-display" class="font-mono font-bold text-sm text-[var(--foreground)] mt-1">-</div>
+      </div>
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 text-center">
+        <div class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] tracking-wider">Operations</div>
+        <div id="ops-display" class="font-mono font-bold text-sm text-emerald-400 mt-1">0</div>
+      </div>
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 text-center">
+        <div class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] tracking-wider">Step Progress</div>
+        <div id="progress-display" class="font-mono font-bold text-sm text-amber-400 mt-1">0 / 0</div>
+      </div>
+    </div>
+
+    <!-- Dual Stack Visual Viewport -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Stack A -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow flex flex-col">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span>
+            <span class="font-bold text-sm text-[var(--foreground)]">Stack A (Top → Bottom)</span>
+          </div>
+          <span id="size-a" class="text-xs text-[var(--muted-foreground)] font-mono">0 items</span>
+        </div>
+        <div id="stack-a-container" class="space-y-2 min-h-[220px] max-h-[360px] overflow-y-auto pr-1 flex flex-col-reverse justify-end">
+          <!-- Rendered in JS -->
+        </div>
+      </div>
+
+      <!-- Stack B -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow flex flex-col">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+            <span class="font-bold text-sm text-[var(--foreground)]">Stack B (Top → Bottom)</span>
+          </div>
+          <span id="size-b" class="text-xs text-[var(--muted-foreground)] font-mono">0 items</span>
+        </div>
+        <div id="stack-b-container" class="space-y-2 min-h-[220px] max-h-[360px] overflow-y-auto pr-1 flex flex-col-reverse justify-end">
+          <!-- Rendered in JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Step Explanation Callout -->
+    <div class="bg-[var(--card)] border border-blue-500/30 rounded-2xl p-5 shadow-lg space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-bold text-blue-400 flex items-center gap-2">
+          <span>💡</span> <span id="op-headline">Operation: Initialization</span>
+        </div>
+        <span id="op-badge" class="font-mono text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">INIT</span>
+      </div>
+      <p id="op-explanation" class="text-sm text-[var(--muted-foreground)] leading-relaxed">
+        Click <b>Play</b> or <b>Next</b> to begin stepping through the simulation.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let rawInputs = [42, -17, 88, 0, 105, 3, 24, 9];
+    let trace = [];
+    let currentStep = 0;
+    let isPlaying = false;
+    let timer = null;
+    let playSpeed = 600;
+
+    function updateSpeed() {
+      playSpeed = parseInt(document.getElementById('speed-slider').value, 10);
+      document.getElementById('speed-val').innerText = `${playSpeed}ms`;
+      if (isPlaying) {
+        clearInterval(timer);
+        timer = setInterval(autoPlayStep, playSpeed);
+      }
+    }
+
+    function generateRandom(n = 8) {
+      let arr = [];
+      while (arr.length < n) {
+        let r = Math.floor(Math.random() * 200) - 100;
+        if (!arr.includes(r)) arr.push(r);
+      }
+      document.getElementById('input-array').value = arr.join(' ');
+      loadCustomInput();
+    }
+
+    function generateTrace(inputNumbers) {
+      let steps = [];
+      let n = inputNumbers.length;
+      if (n === 0) return steps;
+
+      let initialStack = [...inputNumbers];
+      let stackA = [...initialStack];
+      let stackB = [];
+
+      steps.push({
+        op: "INIT",
+        phase: "Raw Input",
+        bit: "-",
+        stackA: [...stackA],
+        stackB: [...stackB],
+        desc: `Loaded ${n} raw input numbers: [${initialStack.join(", ")}].`
+      });
+
+      // Indexing (Coordinate Compression)
+      let sorted = [...inputNumbers].sort((a, b) => a - b);
+      let indexedStack = inputNumbers.map(val => sorted.indexOf(val));
+      stackA = [...indexedStack];
+
+      steps.push({
+        op: "INDEXING",
+        phase: "Coordinate Compression",
+        bit: "-",
+        stackA: [...stackA],
+        stackB: [...stackB],
+        desc: `Mapped every raw value to a contiguous rank in [0, ${n - 1}]. Eliminates negative signs and huge 32-bit values!`
+      });
+
+      function checkSorted(arr) {
+        for (let i = 0; i < arr.length - 1; i++) {
+          if (arr[i] > arr[i + 1]) return false;
+        }
+        return true;
+      }
+
+      if (checkSorted(stackA)) {
+        steps.push({
+          op: "DONE",
+          phase: "Already Sorted",
+          bit: "-",
+          stackA: [...stackA],
+          stackB: [...stackB],
+          desc: "Stack A is already completely sorted in ascending order."
+        });
+        return steps;
+      }
+
+      // Small Sort or Radix Sort
+      if (n <= 3) {
+        while (!checkSorted(stackA)) {
+          if (stackA[0] > stackA[1]) {
+            let tmp = stackA[0]; stackA[0] = stackA[1]; stackA[1] = tmp;
+            steps.push({ op: "sa", phase: "Small Sort", bit: "-", stackA: [...stackA], stackB: [...stackB], desc: "Swapped top 2 elements of Stack A (sa)." });
+          } else {
+            stackA.push(stackA.shift());
+            steps.push({ op: "ra", phase: "Small Sort", bit: "-", stackA: [...stackA], stackB: [...stackB], desc: "Rotated Stack A (ra)." });
+          }
+        }
+      } else {
+        let maxVal = Math.max(...stackA);
+        let maxBits = Math.floor(Math.log2(maxVal)) + 1;
+
+        for (let bit = 0; bit < maxBits; bit++) {
+          if (checkSorted(stackA) && stackB.length === 0) break;
+
+          // Part 1: Process Stack A
+          let aSize = stackA.length;
+          for (let i = 0; i < aSize; i++) {
+            let topVal = stackA[0];
+            let bitVal = (topVal >> bit) & 1;
+            if (bitVal === 0) {
+              stackB.unshift(stackA.shift());
+              steps.push({
+                op: "pb",
+                phase: `Part 1 (Bit ${bit})`,
+                bit: bit,
+                stackA: [...stackA],
+                stackB: [...stackB],
+                desc: `Top element <b>#${topVal}</b> has bit ${bit} = 0 (binary <code>${topVal.toString(2).padStart(maxBits, '0')}</code>). Pushed to Stack B (<code>pb</code>).`
+              });
+            } else {
+              stackA.push(stackA.shift());
+              steps.push({
+                op: "ra",
+                phase: `Part 1 (Bit ${bit})`,
+                bit: bit,
+                stackA: [...stackA],
+                stackB: [...stackB],
+                desc: `Top element <b>#${topVal}</b> has bit ${bit} = 1. Retained in Stack A by rotating (<code>ra</code>).`
+              });
+            }
+          }
+
+          // Part 2: Lookahead Next-Bit Partitioning from Stack B
+          let bSize = stackB.length;
+          if (bit < maxBits - 1) {
+            for (let i = 0; i < bSize; i++) {
+              let topVal = stackB[0];
+              let nextBitVal = (topVal >> (bit + 1)) & 1;
+              if (nextBitVal === 0) {
+                stackB.push(stackB.shift());
+                steps.push({
+                  op: "rb [OPTIMIZATION]",
+                  phase: `Part 2 Lookahead (Bit ${bit + 1})`,
+                  bit: bit,
+                  stackA: [...stackA],
+                  stackB: [...stackB],
+                  desc: `🚀 <b>Lookahead Optimization:</b> Element <b>#${topVal}</b> has NEXT bit ${bit + 1} = 0. It stays inside Stack B and rotates (<code>rb</code>) instead of being pushed back and forth!`
+                });
+              } else {
+                stackA.unshift(stackB.shift());
+                steps.push({
+                  op: "pa",
+                  phase: `Part 2 Lookahead (Bit ${bit + 1})`,
+                  bit: bit,
+                  stackA: [...stackA],
+                  stackB: [...stackB],
+                  desc: `Element <b>#${topVal}</b> has NEXT bit ${bit + 1} = 1. Pushed back to Stack A (<code>pa</code>) ready for the next iteration.`
+                });
+              }
+            }
+          } else {
+            while (stackB.length > 0) {
+              let topVal = stackB[0];
+              stackA.unshift(stackB.shift());
+              steps.push({
+                op: "pa",
+                phase: "Final Flush",
+                bit: bit,
+                stackA: [...stackA],
+                stackB: [...stackB],
+                desc: `Final bit pass: Flushed element <b>#${topVal}</b> back to Stack A (<code>pa</code>).`
+              });
+            }
+          }
+        }
+      }
+
+      steps.push({
+        op: "SORTED ✅",
+        phase: "Completed",
+        bit: "-",
+        stackA: [...stackA],
+        stackB: [...stackB],
+        desc: `🎉 <b>Sorting Complete!</b> Stack A is strictly sorted in ascending order using ${steps.length - 2} operations.`
+      });
+
+      return steps;
+    }
+
+    function renderStep(idx) {
+      if (idx < 0 || idx >= trace.length) return;
+      const step = trace[idx];
+
+      document.getElementById('phase-display').innerText = step.phase;
+      document.getElementById('bit-display').innerText = step.bit;
+      document.getElementById('ops-display').innerText = Math.max(0, idx - 1);
+      document.getElementById('progress-display').innerText = `${idx + 1} / ${trace.length}`;
+      document.getElementById('op-headline').innerText = `Operation: ${step.op}`;
+      document.getElementById('op-badge').innerText = step.op;
+      document.getElementById('op-explanation').innerHTML = step.desc;
+
+      document.getElementById('size-a').innerText = `${step.stackA.length} items`;
+      document.getElementById('size-b').innerText = `${step.stackB.length} items`;
+
+      // Render Stack A
+      const containerA = document.getElementById('stack-a-container');
+      containerA.innerHTML = '';
+      step.stackA.forEach((val, i) => {
+        const isTop = i === 0;
+        const div = document.createElement('div');
+        div.className = `flex justify-between items-center px-3 py-2 rounded-xl text-xs font-mono transition-all ${
+          isTop ? 'bg-blue-600 text-white font-bold shadow-md ring-2 ring-blue-400/50' : 'bg-slate-800/80 text-slate-200 border border-slate-700'
+        }`;
+        div.innerHTML = `<span>${isTop ? '▶ [TOP] ' : ''}#${val}</span> <span class="text-[11px] opacity-75 font-mono">${typeof val === 'number' ? val.toString(2).padStart(4, '0') : ''}</span>`;
+        containerA.appendChild(div);
+      });
+
+      // Render Stack B
+      const containerB = document.getElementById('stack-b-container');
+      containerB.innerHTML = '';
+      step.stackB.forEach((val, i) => {
+        const isTop = i === 0;
+        const div = document.createElement('div');
+        div.className = `flex justify-between items-center px-3 py-2 rounded-xl text-xs font-mono transition-all ${
+          isTop ? 'bg-amber-500 text-slate-950 font-bold shadow-md ring-2 ring-amber-300/50' : 'bg-slate-800/80 text-slate-200 border border-slate-700'
+        }`;
+        div.innerHTML = `<span>${isTop ? '▶ [TOP] ' : ''}#${val}</span> <span class="text-[11px] opacity-75 font-mono">${typeof val === 'number' ? val.toString(2).padStart(4, '0') : ''}</span>`;
+        containerB.appendChild(div);
+      });
+
+      const badge = document.getElementById('status-badge');
+      if (idx === trace.length - 1) {
+        badge.innerText = "Sorted";
+        badge.className = "px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+      } else {
+        badge.innerText = step.op;
+        badge.className = "px-3 py-1 rounded-full text-xs font-mono font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20";
+      }
+    }
+
+    function autoPlayStep() {
+      if (currentStep < trace.length - 1) {
+        currentStep++;
+        renderStep(currentStep);
+      } else {
+        stopPlay();
+      }
+    }
+
+    function stepForward() {
+      if (currentStep < trace.length - 1) {
+        currentStep++;
+        renderStep(currentStep);
+      } else {
+        stopPlay();
+      }
+    }
+
+    function stepBack() {
+      if (currentStep > 0) {
+        currentStep--;
+        renderStep(currentStep);
+      }
+    }
+
+    function togglePlay() {
+      if (isPlaying) {
+        stopPlay();
+      } else {
+        if (currentStep >= trace.length - 1) currentStep = 0;
+        isPlaying = true;
+        document.getElementById('play-btn').innerText = "⏸ Pause";
+        timer = setInterval(autoPlayStep, playSpeed);
+      }
+    }
+
+    function stopPlay() {
+      isPlaying = false;
+      clearInterval(timer);
+      document.getElementById('play-btn').innerText = "▶ Play";
+    }
+
+    function resetSimulation() {
+      stopPlay();
+      currentStep = 0;
+      renderStep(0);
+    }
+
+    function loadCustomInput() {
+      stopPlay();
+      const val = document.getElementById('input-array').value.trim();
+      const nums = val.split(/\s+/).map(x => parseInt(x, 10)).filter(x => !isNaN(x));
+      if (nums.length < 2) {
+        alert("Please enter at least 2 distinct numbers.");
+        return;
+      }
+      rawInputs = nums;
+      trace = generateTrace(rawInputs);
+      currentStep = 0;
+      renderStep(0);
+    }
+
+    // Initialize
+    trace = generateTrace(rawInputs);
+    renderStep(0);
+  </script>
+</body>
+</html>
