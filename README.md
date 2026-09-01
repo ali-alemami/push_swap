@@ -3,22 +3,10 @@
 # Push_swap
 *Because Swap_push doesn’t feel as natural*
 
-<p align="center">
-  <a href="https://ali-alemami.github.io/push_swap/">
-    <img src="https://img.shields.io/badge/🎮_Launch_Live_Visualizer-Interactive_Demo-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Launch Live Visualizer" />
-  </a>
-  <img src="https://img.shields.io/badge/Language-C-00599C?style=for-the-badge&logo=c&logoColor=white" alt="Language C" />
-  <img src="https://img.shields.io/badge/School-42_Network-000000?style=for-the-badge&logo=42&logoColor=white" alt="42 Network" />
-</p>
-
-> 🚀 **[Click here to open the Live Interactive Push_Swap Visualizer](https://ali-alemami.github.io/push_swap/)** directly in your browser — test custom inputs, control playback speed, and see the lookahead optimization in action!
-
----
-
 ## 📌 Description
 The goal of **Push_swap** is to sort a stack of 32-bit signed integers using only two stacks (**Stack A** and **Stack B**) and a restricted set of stack manipulation instructions, producing the sorted output with a minimal operation count (smallest number at the top of Stack A).
 
-This implementation utilizes a **Rank-Indexed Binary Radix Sort** combined with a **Next-Bit Lookahead Optimization**, eliminating redundant push/pop transfers between stacks.
+This implementation features a **Rank-Indexed Binary Radix Sort** enhanced with a **Lookahead Next-Bit Retain Optimization** that eliminates redundant push/pop transfers between stacks.
 
 Included custom libraries:
 - `libft` (Custom C Standard Library)
@@ -26,23 +14,15 @@ Included custom libraries:
 
 ---
 
-## 🎮 Interactive Visualizer (Live in Browser)
+## 🎮 Interactive Visualizer
 
-You can launch the visualizer in 1 click at **[ali-alemami.github.io/push_swap](https://ali-alemami.github.io/push_swap/)**.
+Test and inspect the algorithm live in your browser:  
+👉 **[Launch Live Web Visualizer](https://ali-alemami.github.io/push_swap/)** *(or open `visualizer.html` locally)*
 
-### What the Visualizer Shows:
-* **Real-time Dual Stacks**: Watch Stack A and Stack B update with each instruction.
-* **Bitwise Representation**: Every number displays its binary value (e.g. `#3` $\rightarrow$ `0011`).
-* **Active Bit Highlights**: Clearly highlights the current bit being evaluated.
-* **Lookahead Callouts**: Explains the exact condition when an element stays in Stack B (`rb`) instead of being pushed back (`pa`).
-* **Controls**: Forward / backward single-stepping, autoplay with speed slider, custom input box, and random array generator.
-
-```
-       Stack A (Top)       ───▶  [ #0 | 0000 ]   (Smallest)
-                                 [ #1 | 0001 ]
-                                 [ #2 | 0010 ]
-       Stack A (Bottom)    ───▶  [ #3 | 0011 ]   (Largest)
-```
+* **Live Stack Telemetry**: Real-time visual rendering of Stack A and Stack B.
+* **Bitwise Inspector**: Displays active binary bits (e.g. `#3` $\rightarrow$ `0011`) for every element.
+* **Optimization Callouts**: Live explanations whenever lookahead retention (`rb`) triggers.
+* **Playback Controls**: Step-by-step stepping, variable speed autoplay, random generation, and custom input testing.
 
 ---
 
@@ -64,6 +44,13 @@ typedef struct s
 * **`items[0]`**: Represents the **bottom** of the stack.
 * **`items[top]`**: Represents the **top** of the stack.
 * **Sorted Criterion**: When Stack A is sorted in ascending order (top-to-bottom), `items[top]` holds the smallest integer and `items[0]` holds the largest.
+
+```
+       Stack A (Top)       ───▶  [ #0 | 0000 ]   (Smallest)
+                                 [ #1 | 0001 ]
+                                 [ #2 | 0010 ]
+       Stack A (Bottom)    ───▶  [ #3 | 0011 ]   (Largest)
+```
 
 ---
 
