@@ -18,15 +18,6 @@ This implementation sorts the input by:
 
 ---
 
-## Interactive Visualizer
-
-An interactive web-based simulator is available for stepping through the sort visually:
-
-- **Live Version**: [Launch Visualizer](https://ali-alemami.github.io/push_swap/)
-- **Local**: Open `visualizer.html` in any browser.
-
-Features include real-time stack rendering, binary bit inspection per element, step-by-step control, variable-speed autoplay, and random/custom input loading.
-
 ---
 
 ## Sorting Pipeline
@@ -258,7 +249,3 @@ No arguments produces no output. Invalid input (non-integers, duplicates, overfl
 1. [Radix Sort Visual Explanation](https://youtube.com/shorts/ZHjCj0Oz6hk?si=5SpLmqBpUOKFckCH)
 2. [Coordinate Compression / Indexing](https://youtu.be/Jemuod4wKWo?si=iCpkjPlPGj02fo42)
 3. 42 Push_swap Subject (Version 10.1)
-
-### AI Usage
-- **Visualizer**: The web visualizer (`visualizer.html`) was developed with AI assistance for the interface layout and interactive playback controls.
-- **Documentation**: AI was used to help structure and format this README.
