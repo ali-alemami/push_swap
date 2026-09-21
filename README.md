@@ -249,3 +249,7 @@ No arguments produces no output. Invalid input (non-integers, duplicates, overfl
 1. [Radix Sort Visual Explanation](https://youtube.com/shorts/ZHjCj0Oz6hk?si=5SpLmqBpUOKFckCH)
 2. [Coordinate Compression / Indexing](https://youtu.be/Jemuod4wKWo?si=iCpkjPlPGj02fo42)
 3. 42 Push_swap Subject (Version 10.1)
+
+### AI Usage
+- **Visualizer**: The web visualizer (`index.html`) was developed with AI assistance for the interface layout and interactive playback controls.
+- **Documentation**: AI was used to help structure and format this README.
