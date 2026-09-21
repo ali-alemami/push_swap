@@ -1,124 +1,117 @@
-*This project has been created as part of the 42 curriculum by aalemami*
+*This project has been created as part of the 42 curriculum by aalemami.*
 
 # Push_swap
-*Because Swap_push doesn’t feel as natural*
-
-## 📌 Description
-The goal of **Push_swap** is to sort a stack of 32-bit signed integers using only two stacks (**Stack A** and **Stack B**) and a restricted set of stack manipulation instructions, producing the sorted output with a minimal operation count (smallest number at the top of Stack A).
-
-This implementation features a **Rank-Indexed Binary Radix Sort** enhanced with a **Lookahead Next-Bit Retain Optimization** that eliminates redundant push/pop transfers between stacks.
-
-Included custom libraries:
-- `libft` (Custom C Standard Library)
-- `ft_printf` (Custom formatted output implementation)
+*Because Swap_push doesn't feel as natural*
 
 ---
 
-## 🎮 Interactive Visualizer
+## Description
 
-Test and inspect the algorithm live in your browser:  
-👉 **[Launch Live Web Visualizer](https://ali-alemami.github.io/push_swap/)** *(or open `visualizer.html` locally)*
+Push_swap is a sorting project from the 42 curriculum. The task is to sort a random sequence of integers using two stacks (`a` and `b`) and a fixed set of stack operations, producing the shortest possible list of instructions.
 
-* **Live Stack Telemetry**: Real-time visual rendering of Stack A and Stack B.
-* **Bitwise Inspector**: Displays active binary bits (e.g. `#3` $\rightarrow$ `0011`) for every element.
-* **Optimization Callouts**: Live explanations whenever lookahead retention (`rb`) triggers.
-* **Playback Controls**: Step-by-step stepping, variable speed autoplay, random generation, and custom input testing.
+Stack `a` begins with a random set of unique integers (positive and/or negative), and stack `b` starts empty. The program must output a sequence of instructions that leaves `a` sorted in ascending order with the smallest number at the top, and `b` empty.
 
----
-
-## 🏗️ Architecture & Stack Data Structure
-
-Unlike traditional linked-list implementations, this project uses fixed-capacity, cache-friendly array-backed stacks defined in `stack.h`:
-
-```c
-#define MAX 1024
-
-typedef struct s
-{
-    int items[MAX];
-    int top;
-} t_stack;
-```
-
-### Stack Orientation & Memory Layout
-* **`items[0]`**: Represents the **bottom** of the stack.
-* **`items[top]`**: Represents the **top** of the stack.
-* **Sorted Criterion**: When Stack A is sorted in ascending order (top-to-bottom), `items[top]` holds the smallest integer and `items[0]` holds the largest.
-
-```
-       Stack A (Top)       ───▶  [ #0 | 0000 ]   (Smallest)
-                                 [ #1 | 0001 ]
-                                 [ #2 | 0010 ]
-       Stack A (Bottom)    ───▶  [ #3 | 0011 ]   (Largest)
-```
+This implementation sorts the input by:
+1. **Coordinate Compression (Rank Indexing)**: Replacing raw values with 0-based ranks ($0$ to $N - 1$), which eliminates sign handling and reduces the number of binary digits the algorithm needs to process.
+2. **Heuristic Solvers ($N \le 5$)**: Hard-coded decision trees for small inputs that guarantee minimal operation counts.
+3. **Lookahead Binary Radix Sort ($N > 5$)**: A modified binary radix sort where, instead of blindly flushing Stack B back to Stack A after each bit pass, the algorithm inspects the next bit of each element while it is still in Stack B. Elements that belong in Stack B for the next pass stay there (`rb`), avoiding redundant `pa` followed by `pb` sequences.
 
 ---
 
-## ⚡ Sorting Pipeline & Algorithmic Breakdown
+## Interactive Visualizer
+
+An interactive web-based simulator is available for stepping through the sort visually:
+
+- **Live Version**: [Launch Visualizer](https://ali-alemami.github.io/push_swap/)
+- **Local**: Open `visualizer.html` in any browser.
+
+Features include real-time stack rendering, binary bit inspection per element, step-by-step control, variable-speed autoplay, and random/custom input loading.
+
+---
+
+## Sorting Pipeline
 
 ```mermaid
 flowchart TD
-    A["Raw CLI Input"] --> B["Input Validation & Formatting"]
-    B --> C["Coordinate Compression (Indexing)"]
-    C --> D{"Stack Size (N)"}
-    D -- "N = 2" --> E["Single Swap (sa)"]
-    D -- "N = 3" --> F["sort_three (Max 2 Ops)"]
-    D -- "N <= 5" --> G["sort_five (Push Minima to B)"]
-    D -- "N > 5" --> H["Lookahead Binary Radix Sort"]
+    A["CLI Arguments"] --> B["Input Validation"]
+    B --> C["Coordinate Compression"]
+    C --> D{"N"}
+
+    D -->|"N <= 5"| E{"Heuristic Sort"}
+    D -->|"N > 5"| F["Lookahead Binary<br/>Radix Sort"]
+
+    E -->|"N = 2"| E2["sa (1 op)"]
+    E -->|"N = 3"| E3["sort_three (<= 3 ops)"]
+    E -->|"N = 4, 5"| E5["sort_five (<= 11 ops)"]
 ```
 
 ---
 
-### Phase 1: Coordinate Compression (Indexing)
+### Input Validation
+*File: `input_validation.c`*
+
+All arguments are validated before any sorting takes place:
+- Each token must consist of valid digits with an optional leading `+` or `-`.
+- Every value must fit within the signed 32-bit integer range (`-2147483648` to `2147483647`).
+- No duplicates are allowed.
+- Total element count must not exceed 1024.
+
+If any check fails, the program writes `Error\n` to standard error and exits.
+
+---
+
+### Coordinate Compression
 *File: `indexing.c`*
 
-Radix Sort on raw signed 32-bit integers requires handling negative sign bits and up to 32 bit-passes ($O(32 \times 2N)$ operations). 
+Applying binary radix sort directly to raw signed 32-bit integers would require up to 32 bit passes and special handling for negative values.
 
-**The Indexing Solution**:
-1. Copy all items from Stack A to a temporary array.
-2. Sort the array using Bubble Sort.
-3. Replace each value in Stack A with its sorted **0-based rank** ($0$ to $N - 1$).
+Coordinate compression replaces each value with its rank among the sorted input:
+1. Copy all elements from Stack A into a temporary array.
+2. Sort the array.
+3. Replace each element in Stack A with its position (rank) in the sorted array.
 
-#### Example:
-| Raw Input | `[ 42, -15, 100, 0, 7 ]` |
+#### Example
+
+| Step | Values |
 | :--- | :--- |
-| **Sorted Order** | `[ -15, 0, 7, 42, 100 ]` |
-| **Assigned Ranks** | `-15 ➔ 0`, `0 ➔ 1`, `7 ➔ 2`, `42 ➔ 3`, `100 ➔ 4` |
+| **Raw Input** | `[ 42, -15, 100, 0, 7 ]` |
+| **Sorted** | `[ -15, 0, 7, 42, 100 ]` |
+| **Ranks** | `-15 -> 0, 0 -> 1, 7 -> 2, 42 -> 3, 100 -> 4` |
 | **Indexed Stack** | `[ 3, 0, 4, 1, 2 ]` |
 
-**Benefit**: The maximum value in Stack A is strictly $N - 1$. The required number of bit passes is reduced to:
-$$\text{Max Bits} = \lfloor \log_2(N - 1) \rfloor + 1$$
-* For 100 elements: strictly $\leq 7$ bit passes.
-* For 500 elements: strictly $\leq 9$ bit passes.
+After indexing, ranks range from $0$ to $N - 1$. For 100 elements the highest rank is 99, which needs 7 bits. For 500 elements the highest rank is 499, which needs 9 bits. This directly determines the number of bit passes the radix sort executes.
 
 ---
 
-### Phase 2: Small Size Strategy ($N \leq 5$)
+### Small Size Strategy ($N \le 5$)
 *File: `small_sort.c`*
 
-For small datasets, dedicated heuristic solvers are used instead of Radix Sort:
-* **$N = 2$**: Swaps top elements if unsorted (`sa`).
-* **$N = 3$ (`sort_three`)**: Identifies the position of the maximum element and reaches sorted order within 1 or 2 operations (`sa`, `ra`, `rra`).
-* **$N \le 5$ (`sort_five`)**:
-  1. Locates rank `0` (the minimum) and calculates the shortest path (`ra` vs `rra`) using `move_index_to_top`.
-  2. Pushes `0` to Stack B (`pb`).
-  3. Locates rank `1`, moves it to top, and pushes to Stack B (`pb`).
-  4. Runs `sort_three` on the remaining 3 elements in Stack A.
-  5. Pushes `1` and `0` back to Stack A (`pa`, `pa`).
+For small inputs, radix sort is not worth the overhead. Dedicated solvers handle these cases:
+
+- **$N = 2$**: A single `sa` if the two elements are out of order.
+- **$N = 3$ (`sort_three`)**: Finds the position of the largest element and resolves the ordering. Worst case: 3 operations.
+- **$N = 4$ or $5$ (`sort_five`)**:
+  1. Finds rank `0` (the smallest) and rotates it to the top using the shortest path (`ra` or `rra`).
+  2. Pushes it to Stack B (`pb`).
+  3. Finds rank `1`, moves it to top, pushes to Stack B (`pb`).
+  4. Sorts the remaining 3 elements with `sort_three`.
+  5. Pushes both elements back (`pa`, `pa`).
+  6. Worst case: 11 operations (verified across all 120 permutations of 5 elements).
 
 ---
 
-### Phase 3: Large Sort & 🚀 Lookahead Radix Sort
+### Lookahead Binary Radix Sort ($N > 5$)
 *File: `radix_sort.c`*
 
-#### ❌ The Standard Radix Flaw:
-In standard binary radix implementations:
-1. For bit `k`, items with bit $k = 0$ are pushed to B (`pb`), items with bit $k = 1$ are rotated in A (`ra`).
-2. At the end of the pass, **all items in B are pushed back to A blindly** (`while (!empty(b)) pa;`).
-3. **The Inefficiency**: In the very next pass for bit $k + 1$, roughly half of those returned elements will have bit $k + 1 = 0$ and will be **immediately pushed right back into Stack B**!
+#### How Standard Binary Radix Sort Works on Two Stacks
+For each bit position $k$:
+1. Scan Stack A. If bit $k$ of the top element is `0`, push it to Stack B (`pb`). If it is `1`, rotate it in Stack A (`ra`).
+2. After processing all elements, push everything from Stack B back to Stack A (`pa` until B is empty).
 
-#### ⚡ The Lookahead Optimization (`part2` in `radix_sort.c`):
-Instead of dumping Stack B back into Stack A, `part2` inspects the **NEXT bit ($bit + 1$)** of each element while it is still in Stack B:
+The problem: in the next pass ($k + 1$), roughly half the elements just returned to A will have bit $k + 1 = 0$ and be immediately pushed right back to B.
+
+#### The Lookahead Modification
+Instead of dumping all of Stack B back to Stack A after pass $k$, the algorithm checks bit $k + 1$ of each element while it is still in Stack B:
 
 ```c
 static void	part2(t_stack *a, t_stack *b, int bit, int max_number_digits)
@@ -132,91 +125,140 @@ static void	part2(t_stack *a, t_stack *b, int bit, int max_number_digits)
 	{
 		while (i <= size)
 		{
-			// Lookahead at next bit (bit + 1)
 			if (((b->items[b->top] >> (bit + 1)) & 1) == 0)
-				rotate(b, "rb\n");       // RETAIN in Stack B!
+				rotate(b, "rb\n");       /* Keep in B for next pass */
 			else
-				push_pop(a, b, "pa\n");  // Send to Stack A
+				push_pop(a, b, "pa\n");  /* Send to A */
 			i++;
 		}
 	}
 	else
 		while (!is_empty(b))
-			push_pop(a, b, "pa\n");      // Final pass: flush all to A
+			push_pop(a, b, "pa\n");      /* Last pass: flush all to A */
 }
 ```
 
-#### How it optimizes operation count:
-* **Bit $k+1 = 0$**: The element already belongs in Stack B for the next iteration. It rotates inside Stack B (`rb`) and stays there!
-* **Bit $k+1 = 1$**: The element belongs in Stack A for the next iteration, so it is pushed back (`pa`).
-* **Early Exit**: `is_sorted(a) && is_empty(b)` is checked at the start of every cycle to terminate as soon as the sequence reaches order.
+- **Next bit is 0**: The element will need to be in Stack B during the next pass anyway. It stays in B (`rb`).
+- **Next bit is 1**: The element belongs in A for the next pass. It gets transferred (`pa`).
+- **Early exit**: Before each pass, `is_sorted(a) && is_empty(b)` is checked to terminate early if the stack is already sorted.
+
+This eliminates the redundant `pa`-then-`pb` cycle that standard radix sort produces.
 
 ---
 
-## 📊 Performance & Optimization Comparison
+## Stack Implementation
 
-| Feature | Standard Binary Radix | Lookahead Optimized Radix (aalemami) |
-| :--- | :--- | :--- |
-| **Bit Range** | 32 passes (Raw 32-bit signed ints) | $\lceil \log_2(N) \rceil$ passes (Rank Indexed) |
-| **B to A Restoration** | Blind flush via `pa` | **Lookahead Next-Bit Partitioning** (`rb` / `pa`) |
-| **Wasted Transfers** | High (`pa` followed immediately by `pb`) | **Zero redundant inter-stack transfers** |
-| **Early Termination** | None (runs all bit passes) | Verified before each bit pass |
+The stacks use static arrays rather than linked lists (`stack.h`):
 
----
+```c
+#define MAX 1024
 
-## 🛠️ Available Operations
-
-| Operation | Description |
-| :--- | :--- |
-| `sa` | **Swap A**: Swap the first 2 elements at the top of Stack A. |
-| `sb` | **Swap B**: Swap the first 2 elements at the top of Stack B. |
-| `ss` | `sa` and `sb` simultaneously. |
-| `pa` | **Push A**: Take the top element of B and push it onto A. |
-| `pb` | **Push B**: Take the top element of A and push it onto B. |
-| `ra` | **Rotate A**: Shift up all elements of Stack A by 1 (top becomes bottom). |
-| `rb` | **Rotate B**: Shift up all elements of Stack B by 1 (top becomes bottom). |
-| `rr` | `ra` and `rb` simultaneously. |
-| `rra` | **Reverse Rotate A**: Shift down all elements of Stack A by 1 (bottom becomes top). |
-| `rrb` | **Reverse Rotate B**: Shift down all elements of Stack B by 1 (bottom becomes top). |
-| `rrr` | `rra` and `rrb` simultaneously. |
-
----
-
-## 🚀 Instructions
-
-### Installation
-```bash
-git clone https://github.com/ali-alemami/push_swap.git
-cd push_swap
+typedef struct s
+{
+    int items[MAX];
+    int top;
+}   t_stack;
 ```
 
+The 42 project tests up to 500 elements. A fixed-size array of 1024 keeps the implementation straightforward: no node allocation, no pointer bookkeeping, no `free` chains. `items[0]` is the bottom of the stack, `items[top]` is the top.
+
+---
+
+## Measured Results
+
+Operation counts are deterministic for a given input size because the radix sort processes a fixed number of bit passes based on the rank range, not the specific arrangement of elements.
+
+| Input Size | Operations Produced | 42 Target (100% Score) |
+| :--- | :--- | :--- |
+| **2** | 1 (worst case) | - |
+| **3** | 3 (worst case) | $\le 3$ |
+| **5** | 11 (worst case, all 120 permutations tested) | $\le 12$ |
+| **100** | 913 | $< 700$ |
+| **500** | 5,765 | $< 5,500$ |
+
+Measured across additional sizes for reference:
+
+| N | Operations |
+| :--- | :--- |
+| 6 | 25 |
+| 10 | 54 |
+| 25 | 166 |
+| 50 | 394 |
+| 200 | 2,076 |
+| 300 | 3,501 |
+| 400 | 4,652 |
+
+---
+
+## Available Operations
+
+| Instruction | Description |
+| :--- | :--- |
+| `sa` | Swap the first 2 elements at the top of stack `a`. |
+| `sb` | Swap the first 2 elements at the top of stack `b`. |
+| `ss` | `sa` and `sb` at the same time. |
+| `pa` | Take the first element at the top of `b` and put it at the top of `a`. |
+| `pb` | Take the first element at the top of `a` and put it at the top of `b`. |
+| `ra` | Shift up all elements of stack `a` by 1. The first element becomes the last. |
+| `rb` | Shift up all elements of stack `b` by 1. The first element becomes the last. |
+| `rr` | `ra` and `rb` at the same time. |
+| `rra` | Shift down all elements of stack `a` by 1. The last element becomes the first. |
+| `rrb` | Shift down all elements of stack `b` by 1. The last element becomes the first. |
+| `rrr` | `rra` and `rrb` at the same time. |
+
+---
+
+## Instructions
+
 ### Compilation
-Compile the project using the included `Makefile`:
+
 ```bash
 make
 ```
-This compiles `libft`, `ft_printf`, and builds the `push_swap` executable.
 
-### How to Use
-Run `push_swap` followed by a list of integers:
+Compiles `libft` and builds the `push_swap` executable with `-Wall -Wextra -Werror`.
+
+```bash
+make clean    # Remove object files
+make fclean   # Remove object files and executable
+make re       # Full rebuild
+```
+
+### Execution
+
 ```bash
 ./push_swap 2 1 3 6 5 8
 ```
 
-You can pass arguments as separate arguments, a single quoted string, or mixed:
+Arguments can be passed as separate values or within quotes:
+
 ```bash
-./push_swap "1 2 3"
-./push_swap 1 "2 3"
+./push_swap "2 1 3 6 5 8"
 ./push_swap 42 -17 88 0 105 3 24 9
 ```
 
+Count operations:
+
+```bash
+./push_swap 2 1 3 6 5 8 | wc -l
+```
+
+Verify correctness with the 42 checker:
+
+```bash
+ARG="4 67 3 87 23"; ./push_swap $ARG | ./checker_OS $ARG
+```
+
+No arguments produces no output. Invalid input (non-integers, duplicates, overflow) prints `Error\n` to stderr.
+
 ---
 
-## 📚 Resources
-1. **Radix Sort Visually Explained**: [YouTube Shorts](https://youtube.com/shorts/ZHjCj0Oz6hk?si=5SpLmqBpUOKFckCH)
-2. **What is Indexing?**: [Database & Array Indexing](https://youtu.be/Jemuod4wKWo?si=iCpkjPlPGj02fo42)
+## Resources
 
----
+1. [Radix Sort Visual Explanation](https://youtube.com/shorts/ZHjCj0Oz6hk?si=5SpLmqBpUOKFckCH)
+2. [Coordinate Compression / Indexing](https://youtu.be/Jemuod4wKWo?si=iCpkjPlPGj02fo42)
+3. 42 Push_swap Subject (Version 10.1)
 
-## 📄 License
-This project is open-source and created as part of the 42 Network common core curriculum.
+### AI Usage
+- **Visualizer**: The web visualizer (`visualizer.html`) was developed with AI assistance for the interface layout and interactive playback controls.
+- **Documentation**: AI was used to help structure and format this README.
